@@ -18,7 +18,8 @@ def load_resources():
 index, embed_model = load_resources()
 
 def call_gemini(prompt_text):
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+    # Use v1 endpoint instead of v1beta
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
     payload = {
         "contents": [{
             "parts": [{"text": prompt_text}]
@@ -29,6 +30,11 @@ def call_gemini(prompt_text):
         data = response.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
     else:
+        # Fallback to gemini-2.5-flash if 1.5 isn't available on the endpoint
+        url_fallback = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_KEY}"
+        resp_fallback = requests.post(url_fallback, json=payload)
+        if resp_fallback.status_code == 200:
+            return resp_fallback.json()["candidates"][0]["content"]["parts"][0]["text"]
         return f"Error from Gemini API ({response.status_code}): {response.text}"
 
 # --- UI Layout ---
