@@ -14,7 +14,7 @@ def load_resources():
     pc = Pinecone(api_key=PINECONE_KEY)
     index = pc.Index("news-index")
     genai.configure(api_key=GEMINI_KEY)
-    llm = genai.GenerativeModel('gemini-1.5-flash-latest')
+    llm = genai.GenerativeModel('gemini-pro')
     embed_model = SentenceTransformer('all-MiniLM-L6-v2')
     return index, llm, embed_model
 
