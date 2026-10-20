@@ -1,24 +1,35 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
 from pinecone import Pinecone
 from sentence_transformers import SentenceTransformer
 import os
 
-# --- Setup Secrets (Streamlit Cloud & Local fallback) ---
+# --- Setup Secrets ---
 PINECONE_KEY = st.secrets.get("PINECONE_API_KEY", os.getenv("PINECONE_API_KEY", "pcsk_5ctgLG_BS2s3B5TUmrExjq6MsbiQkUokQek3U7huDCj5iwFVyqsVBgKPr3Sd47Rut1Wg1P"))
 GEMINI_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", "AIzaSyDiPVi7_OMLuHD-Csg7YcsH9Zd_GSHTyeA"))
 
-# --- Cache models so it doesn't reload on every click ---
 @st.cache_resource
 def load_resources():
     pc = Pinecone(api_key=PINECONE_KEY)
     index = pc.Index("news-index")
-    genai.configure(api_key=GEMINI_KEY, transport="rest")
-    llm = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
     embed_model = SentenceTransformer('all-MiniLM-L6-v2')
-    return index, llm, embed_model
+    return index, embed_model
 
-index, llm, embed_model = load_resources()
+index, embed_model = load_resources()
+
+def call_gemini(prompt_text):
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt_text}]
+        }]
+    }
+    response = requests.post(url, json=payload)
+    if response.status_code == 200:
+        data = response.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    else:
+        return f"Error from Gemini API ({response.status_code}): {response.text}"
 
 # --- UI Layout ---
 st.set_page_config(page_title="Tech News AI", page_icon="🤖")
@@ -46,10 +57,10 @@ if st.button("Ask AI"):
                 st.warning("No relevant news records found in the index.")
             else:
                 prompt = f"Context:\n{context}\n\nUser Question: {query}\n\nAnswer concisely based strictly on the context and cite facts:"
-                response = llm.generate_content(prompt)
+                ai_answer = call_gemini(prompt)
                 
                 st.subheader("AI Answer:")
-                st.write(response.text)
+                st.write(ai_answer)
                 
                 with st.expander("See Verified Sources (From Pinecone)"):
                     for s in set(sources):
