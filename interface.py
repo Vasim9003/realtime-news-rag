@@ -13,8 +13,8 @@ GEMINI_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", "AIzaS
 def load_resources():
     pc = Pinecone(api_key=PINECONE_KEY)
     index = pc.Index("news-index")
-    genai.configure(api_key=GEMINI_KEY)
-    llm = genai.GenerativeModel('gemini-pro')
+    genai.configure(api_key=GEMINI_KEY, transport="rest")
+    llm = genai.GenerativeModel(model_name="models/gemini-1.5-flash")
     embed_model = SentenceTransformer('all-MiniLM-L6-v2')
     return index, llm, embed_model
 
